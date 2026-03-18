@@ -1,0 +1,9 @@
+MotorPH Employee Payroll Dashboard Export
+Employee ID: 10002
+Name: Antonio Lim
+Department: 
+Position: Chief Operating Officer
+Monthly Salary: PHP 60000.00
+Gross Pay: PHP 64500.00
+Total Deductions: PHP 10800.00
+Net Pay: PHP 53700.00

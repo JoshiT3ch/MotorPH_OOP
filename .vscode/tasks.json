@@ -1,0 +1,68 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "MotorPH: clean install",
+      "type": "shell",
+      "command": "mvn.cmd",
+      "args": [
+        "clean",
+        "install"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/motorph"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": [
+        "$javac"
+      ]
+    },
+    {
+      "label": "MotorPH: javafx run",
+      "type": "shell",
+      "command": "mvn.cmd",
+      "args": [
+        "javafx:run"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/motorph"
+      },
+      "dependsOn": "MotorPH: clean install",
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "MotorPH: build and run",
+      "type": "shell",
+      "command": "mvn.cmd",
+      "args": [
+        "javafx:run"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/motorph"
+      },
+      "dependsOn": "MotorPH: clean install",
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true,
+        "clear": true
+      }
+    }
+  ]
+}

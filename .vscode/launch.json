@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Main",
+      "request": "launch",
+      "mainClass": "Main",
+      "projectName": "com.yourcompany-motorph-payroll"
+    },
+    {
+      "name": "Debug MotorPH JavaFX (Maven)",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "PayrollSystemGUI",
+      "projectName": "motorph-payroll",
+      "cwd": "${workspaceFolder}/motorph",
+      "preLaunchTask": "MotorPH: clean install"
+    }
+  ]
+}

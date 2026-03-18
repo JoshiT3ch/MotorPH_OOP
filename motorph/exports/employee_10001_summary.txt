@@ -1,0 +1,9 @@
+MotorPH Employee Payroll Dashboard Export
+Employee ID: 10001
+Name: Manuel III Garcia
+Department: 
+Position: Chief Executive Officer
+Monthly Salary: PHP 90000.00
+Gross Pay: PHP 94500.00
+Total Deductions: PHP 17325.00
+Net Pay: PHP 77175.00
