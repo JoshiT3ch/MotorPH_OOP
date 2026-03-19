@@ -1,5 +1,10 @@
 public class PayrollProcessor {
 
+    public static boolean isContractEmployee(Employee employee) {
+        return employee instanceof ContractEmployee
+                || "contract".equalsIgnoreCase(employee.getEmploymentType());
+    }
+
     public record PayrollComputation(
             Employee employee,
             double hoursWorked,
@@ -24,8 +29,12 @@ public class PayrollProcessor {
         System.out.println("ID: " + employee.getId());
         System.out.println("Position: " + employee.getPosition());
         System.out.println("Hours worked: " + String.format("%.2f", payroll.hoursWorked()));
-        System.out.println("Hourly rate: PHP " + String.format("%.2f", payroll.hourlyRate()));
-        System.out.println("Base pay: PHP " + String.format("%.2f", payroll.basePay()));
+        if (isContractEmployee(employee)) {
+            System.out.println("Hourly rate: PHP " + String.format("%.2f", payroll.hourlyRate()));
+            System.out.println("Hourly pay: PHP " + String.format("%.2f", payroll.basePay()));
+        } else {
+            System.out.println("Basic salary: PHP " + String.format("%.2f", payroll.basePay()));
+        }
         System.out.println("Gross salary: PHP " + String.format("%.2f", payroll.grossPay()));
         System.out.println("SSS deduction: PHP " + String.format("%.2f", payroll.sssDeduction()));
         System.out.println("Deductions: PHP " + String.format("%.2f", payroll.totalDeductions()));
@@ -41,7 +50,7 @@ public class PayrollProcessor {
         }
 
         double hourlyRate = employee.getHourlyRate();
-        double basePay = employee instanceof ContractEmployee
+        double basePay = isContractEmployee(employee)
                 ? hourlyRate * hoursWorked
                 : employee.getBasicSalary();
         double grossPay = employee.calculateGrossPay(hoursWorked);

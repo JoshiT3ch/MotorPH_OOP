@@ -5,5 +5,5 @@ Department:
 Position: Chief Executive Officer
 Monthly Salary: PHP 90000.00
 Gross Pay: PHP 94500.00
-Total Deductions: PHP 17325.00
-Net Pay: PHP 77175.00
+Total Deductions: PHP 19320.40
+Net Pay: PHP 75179.60

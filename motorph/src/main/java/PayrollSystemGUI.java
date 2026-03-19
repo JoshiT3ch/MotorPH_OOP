@@ -417,9 +417,9 @@ public class PayrollSystemGUI extends Application {
         }
 
         // Salary Card
-        var salaryCard = buildStatCard("Monthly Salary", 
-            String.format("₱%.2f", emp.getBasicSalary()),
-            "Basic salary",
+        var salaryCard = buildStatCard(getCompensationCardTitle(emp),
+            formatCurrency(getPrimaryCompensationValue(emp)),
+            getCompensationCardSubtitle(emp),
             "#3b82f6", "stat-card stat-card-blue");
         HBox.setHgrow(salaryCard, Priority.ALWAYS);
         container.getChildren().add(salaryCard);
@@ -434,8 +434,8 @@ public class PayrollSystemGUI extends Application {
 
         // Gross Salary Card
         var grossCard = buildStatCard("Gross Pay",
-            String.format("₱%.2f", emp.grossSalary()),
-            "With allowances",
+            formatCurrency(getDashboardGrossPayValue(emp)),
+            getGrossPayCardSubtitle(emp),
             "#f59e0b", "stat-card stat-card-amber");
         HBox.setHgrow(grossCard, Priority.ALWAYS);
         container.getChildren().add(grossCard);
@@ -642,9 +642,9 @@ public class PayrollSystemGUI extends Application {
         }
 
         var salaryCard = buildModernStatCard(
-                "Monthly Salary",
-                String.format("PHP %.2f", emp.getBasicSalary()),
-                "Base monthly salary",
+                getCompensationCardTitle(emp),
+                formatPhp(getPrimaryCompensationValue(emp)),
+                getCompensationCardSubtitle(emp),
                 "#1d4ed8",
                 "dashboard-stat-card stat-card-blue"
         );
@@ -661,8 +661,8 @@ public class PayrollSystemGUI extends Application {
 
         var grossCard = buildModernStatCard(
                 "Gross Pay",
-                String.format("PHP %.2f", emp.grossSalary()),
-                "Salary plus allowances",
+                formatPhp(getDashboardGrossPayValue(emp)),
+                getGrossPayCardSubtitle(emp),
                 "#b45309",
                 "dashboard-stat-card stat-card-amber"
         );
@@ -997,6 +997,8 @@ public class PayrollSystemGUI extends Application {
         state.payrollPeriodSummary.setWrapText(true);
 
         state.totalHoursLabel = new Label();
+        state.compensationBasisTitleLabel = new Label();
+        state.compensationBasisSubtitleLabel = new Label();
         state.hourlyRateLabel = new Label();
         state.grossPayLabel = new Label();
         state.totalDeductionsLabel = new Label();
@@ -1009,7 +1011,7 @@ public class PayrollSystemGUI extends Application {
         metrics.setPrefWrapLength(880);
         metrics.getChildren().addAll(
                 buildDynamicMetricTile("Total Hours Worked", state.totalHoursLabel, "Calculated from completed attendance records for the selected period."),
-                buildDynamicMetricTile("Hourly Rate", state.hourlyRateLabel, "The existing hourly rate used for payroll computation."),
+                buildDynamicMetricTile(state.compensationBasisTitleLabel, state.hourlyRateLabel, state.compensationBasisSubtitleLabel),
                 buildDynamicMetricTile("Gross Pay", state.grossPayLabel, "Base pay plus employee allowances for the selected period."),
                 buildDynamicMetricTile("Total Deductions", state.totalDeductionsLabel, "SSS, PhilHealth, Pag-IBIG, and tax deductions."),
                 buildDynamicMetricTile("Net Pay", state.netPayLabel, "Estimated take-home pay for the selected period."),
@@ -1246,6 +1248,20 @@ public class PayrollSystemGUI extends Application {
         return tile;
     }
 
+    private VBox buildDynamicMetricTile(Label titleNode, Label valueNode, Label subtitleNode) {
+        var tile = new VBox(6);
+        tile.getStyleClass().add("dashboard-metric-tile");
+
+        titleNode.getStyleClass().add("dashboard-stat-title");
+        valueNode.getStyleClass().add("dashboard-stat-value");
+        valueNode.setWrapText(true);
+        subtitleNode.getStyleClass().add("dashboard-stat-subtitle");
+        subtitleNode.setWrapText(true);
+
+        tile.getChildren().addAll(titleNode, valueNode, subtitleNode);
+        return tile;
+    }
+
     private VBox createLabeledNode(String label, Node node) {
         var wrapper = new VBox(6);
         wrapper.getStyleClass().add("dashboard-control-block");
@@ -1371,7 +1387,9 @@ public class PayrollSystemGUI extends Application {
             state.payrollPeriodSummary.setText("Select a valid payroll month and year to refresh the salary details.");
             state.payrollPeriodSummary.getStyleClass().setAll("dashboard-feedback", "dashboard-feedback-warning");
             state.totalHoursLabel.setText("0.00");
-            state.hourlyRateLabel.setText(String.format("PHP %.2f", emp.getHourlyRate()));
+            state.compensationBasisTitleLabel.setText(getCompensationMetricTitle(emp));
+            state.compensationBasisSubtitleLabel.setText(getCompensationMetricSubtitle(emp));
+            state.hourlyRateLabel.setText(formatPhp(getDisplayedCompensationBasis(emp)));
             state.grossPayLabel.setText("PHP 0.00");
             state.totalDeductionsLabel.setText("PHP 0.00");
             state.netPayLabel.setText("PHP 0.00");
@@ -1395,16 +1413,20 @@ public class PayrollSystemGUI extends Application {
                     totalHoursWorked));
             state.payrollPeriodSummary.getStyleClass().setAll("dashboard-feedback", "dashboard-feedback-info");
             state.totalHoursLabel.setText(String.format("%.2f hrs", totalHoursWorked));
-            state.hourlyRateLabel.setText(String.format("PHP %.2f", payroll.hourlyRate()));
-            state.grossPayLabel.setText(String.format("PHP %.2f", payroll.grossPay()));
-            state.totalDeductionsLabel.setText(String.format("PHP %.2f", payroll.totalDeductions()));
-            state.netPayLabel.setText(String.format("PHP %.2f", payroll.netPay()));
+            state.compensationBasisTitleLabel.setText(getCompensationMetricTitle(emp));
+            state.compensationBasisSubtitleLabel.setText(getCompensationMetricSubtitle(emp));
+            state.hourlyRateLabel.setText(formatPhp(getDisplayedCompensationBasis(emp, payroll)));
+            state.grossPayLabel.setText(formatPhp(payroll.grossPay()));
+            state.totalDeductionsLabel.setText(formatPhp(payroll.totalDeductions()));
+            state.netPayLabel.setText(formatPhp(payroll.netPay()));
             state.completedAttendanceLabel.setText(String.valueOf(completedAttendanceRecords));
         } catch (IllegalStateException ex) {
             state.payrollPeriodSummary.setText("Payroll computation could not be completed: " + ex.getMessage());
             state.payrollPeriodSummary.getStyleClass().setAll("dashboard-feedback", "dashboard-feedback-error");
             state.totalHoursLabel.setText(String.format("%.2f hrs", totalHoursWorked));
-            state.hourlyRateLabel.setText(String.format("PHP %.2f", emp.getHourlyRate()));
+            state.compensationBasisTitleLabel.setText(getCompensationMetricTitle(emp));
+            state.compensationBasisSubtitleLabel.setText(getCompensationMetricSubtitle(emp));
+            state.hourlyRateLabel.setText(formatPhp(getDisplayedCompensationBasis(emp)));
             state.grossPayLabel.setText("PHP 0.00");
             state.totalDeductionsLabel.setText("PHP 0.00");
             state.netPayLabel.setText("PHP 0.00");
@@ -1434,8 +1456,8 @@ public class PayrollSystemGUI extends Application {
             writer.println("Name: " + safe(emp.getFirstName()) + " " + safe(emp.getLastName()));
             writer.println("Department: " + safe(emp.getDepartment()));
             writer.println("Position: " + safe(emp.getPosition()));
-            writer.println("Monthly Salary: " + String.format("PHP %.2f", emp.getBasicSalary()));
-            writer.println("Gross Pay: " + String.format("PHP %.2f", emp.grossSalary()));
+            writer.println(getCompensationCardTitle(emp) + ": " + formatPhp(getPrimaryCompensationValue(emp)));
+            writer.println("Gross Pay: " + formatPhp(getDashboardGrossPayValue(emp)));
             writer.println("Total Deductions: " + String.format("PHP %.2f", emp.calculateDeductions()));
             writer.println("Net Pay: " + String.format("PHP %.2f", emp.calculateNetSalary()));
         } catch (IOException ex) {
@@ -1521,6 +1543,8 @@ public class PayrollSystemGUI extends Application {
         private DatePicker payrollDatePicker;
         private Label payrollPeriodSummary;
         private Label totalHoursLabel;
+        private Label compensationBasisTitleLabel;
+        private Label compensationBasisSubtitleLabel;
         private Label hourlyRateLabel;
         private Label grossPayLabel;
         private Label totalDeductionsLabel;
@@ -1556,40 +1580,41 @@ public class PayrollSystemGUI extends Application {
         } catch (Exception ignored) {
         }
 
-        double gross = emp.grossSalary();
-        double sss = emp.getSssDeduction();
-        double ph = emp.getPhilhealthDeduction();
-        double pagibig = emp.getPagibigDeduction();
-        double tax = emp.getTaxDeduction();
-        double totalDed = emp.calculateDeductions(); // polymorphic public method
-        double net = emp.calculateNetSalary();       // polymorphic public method
+        PayrollProcessor.PayrollComputation payroll = new PayrollProcessor().computePayroll(emp, emp.getHoursWorked());
+        boolean contractEmployee = PayrollProcessor.isContractEmployee(emp);
 
         StringBuilder content = new StringBuilder();
-        content.append("═══════════════════════════════════\n");
+        content.append("===================================\n");
         content.append("         PAYROLL SUMMARY\n");
-        content.append("═══════════════════════════════════\n\n");
+        content.append("===================================\n\n");
 
         content.append("INCOME\n");
-        content.append("────────────────────────────────────\n");
-        content.append(String.format("Basic Salary:        ₱%>10.2f\n", emp.getBasicSalary()));
-        content.append(String.format("Rice Subsidy:        ₱%>10.2f\n", emp.getRiceSubsidy()));
-        content.append(String.format("Phone Allowance:     ₱%>10.2f\n", emp.getPhoneAllowance()));
-        content.append(String.format("Clothing Allowance:  ₱%>10.2f\n", emp.getClothingAllowance()));
-        content.append("────────────────────────────────────\n");
-        content.append(String.format("Gross Salary:        ₱%>10.2f\n\n", gross));
+        content.append("------------------------------------\n");
+        if (contractEmployee) {
+            content.append(String.format("Hourly Rate:         PHP %10.2f\n", payroll.hourlyRate()));
+            content.append(String.format("Hours Worked:            %10.2f\n", payroll.hoursWorked()));
+            content.append(String.format("Hourly Pay:          PHP %10.2f\n", payroll.basePay()));
+        } else {
+            content.append(String.format("Basic Salary:        PHP %10.2f\n", payroll.basePay()));
+            content.append(String.format("Rice Subsidy:        PHP %10.2f\n", emp.getRiceSubsidy()));
+            content.append(String.format("Phone Allowance:     PHP %10.2f\n", emp.getPhoneAllowance()));
+            content.append(String.format("Clothing Allowance:  PHP %10.2f\n", emp.getClothingAllowance()));
+        }
+        content.append("------------------------------------\n");
+        content.append(String.format("Gross Salary:        PHP %10.2f\n\n", payroll.grossPay()));
 
         content.append("DEDUCTIONS\n");
-        content.append("────────────────────────────────────\n");
-        content.append(String.format("SSS:                 ₱%>10.2f\n", sss));
-        content.append(String.format("PhilHealth:          ₱%>10.2f\n", ph));
-        content.append(String.format("Pag-IBIG:            ₱%>10.2f\n", pagibig));
-        content.append(String.format("Withholding Tax:     ₱%>10.2f\n", tax));
-        content.append("────────────────────────────────────\n");
-        content.append(String.format("Total Deductions:    ₱%>10.2f\n\n", totalDed));
+        content.append("------------------------------------\n");
+        content.append(String.format("SSS:                 PHP %10.2f\n", payroll.sssDeduction()));
+        content.append(String.format("PhilHealth:          PHP %10.2f\n", payroll.philhealthDeduction()));
+        content.append(String.format("Pag-IBIG:            PHP %10.2f\n", payroll.pagibigDeduction()));
+        content.append(String.format("Withholding Tax:     PHP %10.2f\n", payroll.taxDeduction()));
+        content.append("------------------------------------\n");
+        content.append(String.format("Total Deductions:    PHP %10.2f\n\n", payroll.totalDeductions()));
 
-        content.append("═══════════════════════════════════\n");
-        content.append(String.format("NET SALARY:          ₱%>10.2f\n", net));
-        content.append("═══════════════════════════════════\n");
+        content.append("===================================\n");
+        content.append(String.format("NET SALARY:          PHP %10.2f\n", payroll.netPay()));
+        content.append("===================================\n");
 
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Payroll Summary");
@@ -2531,11 +2556,15 @@ public class PayrollSystemGUI extends Application {
         content.append("Employee:").append(" ").append(formatEmployeeDisplay(selected)).append("\n");
         content.append("Total hours worked:").append(" ").append(String.format("%.2f", totalHoursWorked)).append("\n");
         content.append("Completed attendance records:").append(" ").append(completedAttendanceRecords).append("\n\n");
-        content.append("Hourly rate:").append(" ").append(String.format("%.2f", payroll.hourlyRate())).append("\n");
-        content.append("Hourly pay:").append(" ").append(String.format("%.2f", payroll.basePay())).append("\n");
-        content.append("Rice subsidy:").append(" ").append(String.format("%.2f", selected.getRiceSubsidy())).append("\n");
-        content.append("Phone allowance:").append(" ").append(String.format("%.2f", selected.getPhoneAllowance())).append("\n");
-        content.append("Clothing allowance:").append(" ").append(String.format("%.2f", selected.getClothingAllowance())).append("\n\n");
+        if (PayrollProcessor.isContractEmployee(selected)) {
+            content.append("Hourly rate:").append(" ").append(String.format("%.2f", payroll.hourlyRate())).append("\n");
+            content.append("Hourly pay:").append(" ").append(String.format("%.2f", payroll.basePay())).append("\n\n");
+        } else {
+            content.append("Basic salary:").append(" ").append(String.format("%.2f", payroll.basePay())).append("\n");
+            content.append("Rice subsidy:").append(" ").append(String.format("%.2f", selected.getRiceSubsidy())).append("\n");
+            content.append("Phone allowance:").append(" ").append(String.format("%.2f", selected.getPhoneAllowance())).append("\n");
+            content.append("Clothing allowance:").append(" ").append(String.format("%.2f", selected.getClothingAllowance())).append("\n\n");
+        }
         content.append("Gross salary:").append(" ").append(String.format("%.2f", payroll.grossPay())).append("\n\n");
 
         content.append("SSS deduction:").append(" ").append(String.format("%.2f", payroll.sssDeduction())).append("\n");
@@ -2706,6 +2735,54 @@ public class PayrollSystemGUI extends Application {
             return 0.0;
         }
         return basicSalary <= 0 ? 0.0 : basicSalary / 168.0;
+    }
+
+    private static String formatPhp(double amount) {
+        return String.format("PHP %.2f", amount);
+    }
+
+    private static String formatCurrency(double amount) {
+        return String.format("₱%.2f", amount);
+    }
+
+    private static String getCompensationCardTitle(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp) ? "Hourly Rate" : "Monthly Salary";
+    }
+
+    private static String getCompensationCardSubtitle(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp) ? "Contract hourly pay basis" : "Basic salary";
+    }
+
+    private static String getGrossPayCardSubtitle(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp)
+                ? "Based on recorded hours worked"
+                : "Salary plus allowances";
+    }
+
+    private static double getPrimaryCompensationValue(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp) ? emp.getHourlyRate() : emp.getBasicSalary();
+    }
+
+    private static double getDashboardGrossPayValue(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp) ? emp.calculateGrossPay(emp.getHoursWorked()) : emp.grossSalary();
+    }
+
+    private static String getCompensationMetricTitle(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp) ? "Hourly Rate" : "Basic Salary";
+    }
+
+    private static String getCompensationMetricSubtitle(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp)
+                ? "Hourly rate multiplied by hours worked for the selected period."
+                : "Fixed monthly salary used directly in payroll computation.";
+    }
+
+    private static double getDisplayedCompensationBasis(Employee emp) {
+        return PayrollProcessor.isContractEmployee(emp) ? emp.getHourlyRate() : emp.getBasicSalary();
+    }
+
+    private static double getDisplayedCompensationBasis(Employee emp, PayrollProcessor.PayrollComputation payroll) {
+        return PayrollProcessor.isContractEmployee(emp) ? payroll.hourlyRate() : payroll.basePay();
     }
 
     private static Region spacer(double h) {
