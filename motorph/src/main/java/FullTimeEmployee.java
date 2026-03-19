@@ -29,14 +29,17 @@ public class FullTimeEmployee extends Employee {
     }
 
     @Override
-    public double calculateDeductions() {
-        // full-time employees pay all standard contributions
-        return totalDeductions();
+    protected double calculateBasePay(double hoursWorked) {
+        return getBasicSalary();
     }
 
     @Override
-    public double calculateNetSalary() {
-        // gross minus deductions
-        return grossSalary() - calculateDeductions();
+    public double calculateDeductions(double hoursWorked) {
+        return calculateMandatoryDeductionsBeforeTax(hoursWorked) + calculateTaxDeduction(hoursWorked);
+    }
+
+    @Override
+    public double calculateNetSalary(double hoursWorked) {
+        return calculateGrossPay(hoursWorked) - calculateDeductions(hoursWorked);
     }
 }

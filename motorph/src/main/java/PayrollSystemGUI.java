@@ -88,13 +88,26 @@ public class PayrollSystemGUI extends Application {
 
         Runnable doLogin = () -> {
             try {
-                this.session = authenticate(username.getText(), password.getText());
-                if (this.session == null) {
-                    msg.setText("Invalid credentials.");
+                String enteredUsername = safeTrim(username.getText());
+                String enteredPassword = safeTrim(password.getText());
+                if (enteredUsername.isEmpty() || enteredPassword.isEmpty()) {
+                    msg.setText("Enter both username and password.");
                     return;
                 }
-                loadEmployeesFromCsv();  // Load employees data from CSV
-                primaryStage.setScene(buildAppScene());  // Navigate to the main screen
+
+                this.session = authenticate(username.getText(), password.getText());
+                if (this.session == null) {
+                    msg.setText("Invalid username or password.");
+                    return;
+                }
+                loadEmployeesFromCsv();
+                if (!this.session.isAdmin() && employees.stream().noneMatch(e -> safe(e.getId()).equals(this.session.employeeId()))) {
+                    msg.setText("Login succeeded, but no employee profile was found for ID " + this.session.employeeId() + ".");
+                    this.session = null;
+                    return;
+                }
+                msg.setText("");
+                primaryStage.setScene(buildAppScene());
             } catch (Exception ex) {
                 msg.setText("Login error: " + ex.getMessage());
             }
@@ -110,149 +123,123 @@ public class PayrollSystemGUI extends Application {
     }
 
     private void loadEmployeesFromCsv() throws IOException, CsvValidationException {
-    employees.clear();
-    File f = new File(EMPLOYEE_CSV);
-    if (!f.exists()) {
-        return;  // File doesn't exist, start with empty list
-    }
-
-    try (CSVReader reader = new CSVReader(new FileReader(f, EMPLOYEE_CSV_CHARSET))) {
-        String[] header = reader.readNext();
-        if (header == null) {
+        employees.clear();
+        File f = new File(EMPLOYEE_CSV);
+        if (!f.exists()) {
             return;
         }
-        Map<String, Integer> headerIndexes = buildHeaderIndexMap(header);
-        String[] row;
-        while ((row = reader.readNext()) != null) {
-            // Ensure there are 15 core columns before reading optional payroll metadata.
-            if (row.length < 15) {
-                System.out.println("Skipping malformed employee row (length=" + row.length + "): " + Arrays.toString(row));
-                continue;  // Skip malformed rows
-            }
 
-            // choose subclass based on position text
-            String positionStr = safeTrim(row[9]);
-            boolean isContract = positionStr.toLowerCase().contains("contract");
-            double basicSalary = parseDouble(row[11]);
-            double grossSemiMonthlyRate = readOptionalAmount(row, headerIndexes, "Gross Semi-Monthly Rate", basicSalary / 2.0);
-            double hourlyRate = readOptionalAmount(row, headerIndexes, "Hourly Rate", deriveHourlyRate(basicSalary));
-            Employee emp;
-            if (isContract) {
-                emp = new ContractEmployee(
-                    safeTrim(row[0]),
-                    safeTrim(row[1]),
-                    safeTrim(row[2]),
-                    safeTrim(row[3]),
-                    safeTrim(row[4]),
-                    safeTrim(row[5]),
-                    safeTrim(row[6]),
-                    safeTrim(row[7]),
-                    "",
-                    safeTrim(row[8]),
-                    "contract",
-                    positionStr,
-                    "",
-                    safeTrim(row[10]),
-                    basicSalary,
-                    parseDouble(row[12]),
-                    parseDouble(row[13]),
-                    parseDouble(row[14]),
-                    grossSemiMonthlyRate,
-                    hourlyRate
+        try (CSVReader reader = new CSVReader(new FileReader(f, EMPLOYEE_CSV_CHARSET))) {
+            String[] header = reader.readNext();
+            if (header == null) {
+                return;
+            }
+            Map<String, Integer> headerIndexes = buildHeaderIndexMap(header);
+            String[] row;
+            while ((row = reader.readNext()) != null) {
+                if (row.length < 9) {
+                    System.out.println("Skipping malformed employee row (length=" + row.length + "): " + Arrays.toString(row));
+                    continue;
+                }
+
+                String id = readText(row, headerIndexes, 0, "Employee #");
+                String lastName = readText(row, headerIndexes, 1, "Last Name");
+                String firstName = readText(row, headerIndexes, 2, "First Name");
+                String birthdate = readText(row, headerIndexes, 3, "Birthday");
+                String address = readText(row, headerIndexes, 4, "Address");
+                String phoneNumber = readText(row, headerIndexes, 5, "Phone Number");
+                String sssNumber = readText(row, headerIndexes, 6, "SSS Number");
+                String philhealthNumber = readText(row, headerIndexes, 7, "PhilHealth Number");
+                String tinNumber = readText(row, headerIndexes, -1, "TIN Number");
+                String pagibigNumber = readText(row, headerIndexes, 8, "PAG-IBIG Number");
+                String employmentType = resolveEmploymentType(row, headerIndexes);
+                String positionStr = readText(row, headerIndexes, 9, "Position");
+                String department = readText(row, headerIndexes, 10, "Department");
+                double basicSalary = readAmount(row, headerIndexes, 11, "Basic Salary", 0.0);
+                double riceSubsidy = readAmount(row, headerIndexes, 12, "Rice Subsidy", 0.0);
+                double phoneAllowance = readAmount(row, headerIndexes, 13, "Phone Allowance", 0.0);
+                double clothingAllowance = readAmount(row, headerIndexes, 14, "Clothing Allowance", 0.0);
+                double grossSemiMonthlyRate = readAmount(row, headerIndexes, -1, "Gross Semi-Monthly Rate", basicSalary / 2.0);
+                double hourlyRate = readAmount(row, headerIndexes, -1, "Hourly Rate", deriveHourlyRate(basicSalary, employmentType));
+
+                EmployeeFormData formData = new EmployeeFormData(
+                        id,
+                        lastName,
+                        firstName,
+                        birthdate,
+                        address,
+                        phoneNumber,
+                        sssNumber,
+                        philhealthNumber,
+                        tinNumber,
+                        pagibigNumber,
+                        "contract".equals(employmentType) ? EmployeeFormData.CONTRACT : EmployeeFormData.FULL_TIME,
+                        positionStr,
+                        department,
+                        basicSalary,
+                        riceSubsidy,
+                        phoneAllowance,
+                        clothingAllowance,
+                        hourlyRate
                 );
-            } else {
-                emp = new FullTimeEmployee(
-                    safeTrim(row[0]),
-                    safeTrim(row[1]),
-                    safeTrim(row[2]),
-                    safeTrim(row[3]),
-                    safeTrim(row[4]),
-                    safeTrim(row[5]),
-                    safeTrim(row[6]),
-                    safeTrim(row[7]),
-                    "",
-                    safeTrim(row[8]),
-                    "fulltime",
-                    positionStr,
-                    "",
-                    safeTrim(row[10]),
-                    basicSalary,
-                    parseDouble(row[12]),
-                    parseDouble(row[13]),
-                    parseDouble(row[14]),
-                    grossSemiMonthlyRate,
-                    hourlyRate
-                );
+                Employee emp = formData.toEmployee();
+                emp.setGrossSemiMonthlyRate(grossSemiMonthlyRate);
+                employees.add(emp);
             }
-            employees.add(emp);
+        }
+
+        try {
+            Employee.loadContributionRates();
+        } catch (Exception ignore) {
         }
     }
 
-    // ensure contribution tables are loaded once so calculations work
-    try {
-        Employee.loadContributionRates();
-    } catch (Exception ignore) {
-        // If rate files are missing or malformatted, leave deduct methods using defaults
-    }
-}
-
-private UserAccount authenticate(String rawUser, String rawPass) throws IOException, CsvValidationException {
-    String username = safeTrim(rawUser);
-    String password = safeTrim(rawPass);
-
-    // Skip if either username or password is empty
-    if (username.isEmpty() || password.isEmpty()) return null;
-
-    // Load users from CSV
-    List<UserAccount> accounts = readUsers(USERS_CSV);
-
-    // Check each user in the list
-    for (UserAccount a : accounts) {
-        if (a.username.equals(username) && a.password.equals(password)) {
-            return a;  // Return the matching user
+    private UserAccount authenticate(String rawUser, String rawPass) throws IOException, CsvValidationException {
+        String username = safeTrim(rawUser);
+        String password = safeTrim(rawPass);
+        if (username.isEmpty() || password.isEmpty()) {
+            return null;
         }
+
+        for (UserAccount account : readUsers(USERS_CSV)) {
+            if (account.matchesCredentials(username, password)) {
+                return account;
+            }
+        }
+        return null;
     }
 
-    // If no match is found, return null
-    return null;
-}
+    private List<UserAccount> readUsers(String filePath) throws IOException, CsvValidationException {
+        File f = new File(filePath);
+        if (!f.exists()) {
+            throw new FileNotFoundException("Missing " + filePath);
+        }
 
-   private List<UserAccount> readUsers(String filePath) throws IOException, CsvValidationException {
-    File f = new File(filePath);
-    if (!f.exists()) {
-        throw new FileNotFoundException("Missing " + filePath);
-    }
+        try (CSVReader reader = new CSVReader(new FileReader(f))) {
+            reader.readNext();
+            List<UserAccount> out = new ArrayList<>();
+            String[] row;
 
-    try (CSVReader reader = new CSVReader(new FileReader(f))) {
-        reader.readNext();  // Skip header if present
-        List<UserAccount> out = new ArrayList<>();
-        String[] row;
+            while ((row = reader.readNext()) != null) {
+                if (row.length < 4) {
+                    System.out.println("Skipping malformed row: " + Arrays.toString(row));
+                    continue;
+                }
 
-        while ((row = reader.readNext()) != null) {
-            // Ensure the row has the expected number of columns (4 columns)
-            if (row.length < 4) {
-                // Skip malformed rows
-                System.out.println("Skipping malformed row: " + Arrays.toString(row));  // Debug log
-                continue;
+                String u = safeTrim(row[0]);
+                String p = safeTrim(row[1]);
+                String role = safeTrim(row[2]);
+                String employeeId = safeTrim(row[3]);
+                boolean isAdmin = "admin".equalsIgnoreCase(role) || "admin".equalsIgnoreCase(u);
+                if (!isAdmin && employeeId.isEmpty()) {
+                    employeeId = u;
+                }
+                out.add(new UserAccount(u, p, isAdmin, employeeId));
             }
 
-            String u = safeTrim(row[0]);  // username
-            String p = safeTrim(row[1]);  // password
-            String role = safeTrim(row[2]); // role
-            String employeeId = safeTrim(row[3]); // employeeId (optional)
-
-            // Handle admin and employee logic
-            boolean isAdmin = "admin".equalsIgnoreCase(role) || "admin".equalsIgnoreCase(u);
-
-            // If user is not an admin, assign employeeId if present
-            if (!isAdmin && employeeId.isEmpty()) employeeId = u; // Use username if no employee ID
-
-            out.add(new UserAccount(u, p, isAdmin, employeeId));
+            return out;
         }
-
-        return out;
     }
-}
 
     // ------------------------- Main App UI -------------------------
     private Scene buildAppScene() {
@@ -279,10 +266,10 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         var title = new Label("Payroll Dashboard");
         title.getStyleClass().add("app-topbar-title");
 
-        var badge = new Label(session.isAdmin ? "ADMIN" : "USER");
-        badge.getStyleClass().addAll("app-role-badge", session.isAdmin ? "app-role-admin" : "app-role-user");
+        var badge = new Label(session.isAdmin() ? "ADMIN" : "USER");
+        badge.getStyleClass().addAll("app-role-badge", session.isAdmin() ? "app-role-admin" : "app-role-user");
 
-        String userDisplay = session.isAdmin ? session.username : ("Employee # " + session.employeeId);
+        String userDisplay = session.isAdmin() ? session.username() : ("Employee # " + session.employeeId());
         var who = new Label(userDisplay);
         who.getStyleClass().add("app-topbar-user");
 
@@ -335,7 +322,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
     }
 
     private VBox buildCenter() {
-        if (session.isAdmin) {
+        if (session.isAdmin()) {
             return buildAdminDashboard();
         } else {
             return buildEmployeeDashboard();
@@ -345,7 +332,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
     private VBox buildAdminDashboard() {
         var card = new VBox(12);
         card.setPadding(new Insets(16));
-        card.setStyle("-fx-background-color: #0f172a; -fx-background-radius: 16; -fx-border-color: #1e293b; -fx-border-width: 1; -fx-border-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 24, 0.15, 0, 8);");
+        card.setStyle(adminCardStyle());
         card.setMaxWidth(Double.MAX_VALUE);
         card.setMaxHeight(Double.MAX_VALUE);
 
@@ -354,7 +341,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         header.setPadding(new Insets(0, 0, 8, 0));
 
         var label = new Label("Employees");
-        label.setStyle("-fx-text-fill: #e2e8f0; -fx-font-size: 16; -fx-font-weight: 700;");
+        label.setStyle(adminHeadingStyle());
 
         var refresh = new Button("Refresh");
         styleGhostButton(refresh);
@@ -380,7 +367,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
 
     private VBox buildEmployeeDashboard() {
         Employee currentEmployee = employees.stream()
-                .filter(e -> safe(e.getId()).equals(session.employeeId))
+                .filter(e -> safe(e.getId()).equals(session.employeeId()))
                 .findFirst()
                 .orElse(null);
 
@@ -1719,7 +1706,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
     }
 
     private VBox buildRightPanel() {
-        if (session.isAdmin) {
+        if (session.isAdmin()) {
             return buildAdminActionsPanel();
         } else {
             // Employee dashboard has its own actions panel integrated
@@ -1803,9 +1790,9 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         try {
             List<String[]> rawAttendanceData = loadAttendanceData();
             final List<String[]> attendanceData;
-            if (!session.isAdmin) {
+            if (!session.isAdmin()) {
                 attendanceData = rawAttendanceData.stream()
-                    .filter(row -> row.length > 0 && row[0].equals(session.employeeId))
+                    .filter(row -> row.length > 0 && row[0].equals(session.employeeId()))
                     .toList();
             } else {
                 attendanceData = rawAttendanceData;
@@ -2282,8 +2269,8 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         EmployeeFormData data = EmployeeFormDialog.show(primaryStage, "Add Employee", null);
         if (data == null) return;
 
-        if (employees.stream().anyMatch(e -> safe(e.getId()).equals(data.id))) {
-            showError("Duplicate Employee #", "Employee # already exists: " + data.id);
+        if (employees.stream().anyMatch(e -> safe(e.getId()).equals(data.id()))) {
+            showError("Duplicate Employee #", "Employee # already exists: " + data.id());
             return;
         }
 
@@ -2304,9 +2291,9 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         if (data == null) return;
 
         // Prevent changing ID to an existing one
-        boolean idChanged = !safe(selected.getId()).equals(data.id);
-        if (idChanged && employees.stream().anyMatch(e -> safe(e.getId()).equals(data.id))) {
-            showError("Duplicate Employee #", "Employee # already exists: " + data.id);
+        boolean idChanged = !safe(selected.getId()).equals(data.id());
+        if (idChanged && employees.stream().anyMatch(e -> safe(e.getId()).equals(data.id()))) {
+            showError("Duplicate Employee #", "Employee # already exists: " + data.id());
             return;
         }
 
@@ -2379,10 +2366,10 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
     }
 
     private Optional<PayrollComputationRequest> promptPayrollComputationSelection() {
-        Employee initiallySelectedEmployee = session.isAdmin
+        Employee initiallySelectedEmployee = session.isAdmin()
                 ? selectedOrNull()
                 : employees.stream()
-                    .filter(e -> safe(e.getId()).equals(session.employeeId))
+                    .filter(e -> safe(e.getId()).equals(session.employeeId()))
                     .findFirst()
                     .orElse(null);
 
@@ -2409,7 +2396,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         } else if (!employees.isEmpty()) {
             employeeBox.setValue(employees.getFirst());
         }
-        employeeBox.setDisable(!session.isAdmin);
+        employeeBox.setDisable(!session.isAdmin());
 
         List<String[]> attendanceRows;
         try {
@@ -2596,15 +2583,13 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         try (FileWriter fw = new FileWriter(EMPLOYEE_CSV, EMPLOYEE_CSV_CHARSET);
              CSVWriter writer = new CSVWriter(fw)) {
             
-            // Write header with new fields (including salary and allowances)
             writer.writeNext(new String[]{
                 "Employee #", "Last Name", "First Name", "Birthday", "Address", 
-                "Phone Number", "SSS Number", "PhilHealth Number", "PAG-IBIG Number", 
-                "Position", "Department", "Basic Salary", "Rice Subsidy", 
+                "Phone Number", "SSS Number", "PhilHealth Number", "TIN Number", "PAG-IBIG Number",
+                "Employment Type", "Position", "Department", "Basic Salary", "Rice Subsidy", 
                 "Phone Allowance", "Clothing Allowance", "Gross Semi-Monthly Rate", "Hourly Rate"
             });
 
-            // Write employee data
             for (Employee emp : employees) {
                 writer.writeNext(new String[]{
                     safe(emp.getId()),
@@ -2615,7 +2600,9 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
                     safe(emp.getPhoneNumber()),
                     safe(emp.getSssNo()),
                     safe(emp.getPhilhealthNo()),
+                    safe(emp.getTinNo()),
                     safe(emp.getPagibigNo()),
+                    safe(emp.getEmploymentType()),
                     safe(emp.getPosition()),
                     safe(emp.getDepartment()),
                     String.valueOf(emp.getBasicSalary()),
@@ -2635,7 +2622,7 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
 
     // Reload Table Items
     private void reloadTableItems() {
-        if (!session.isAdmin) {
+        if (!session.isAdmin()) {
             return; // Skip for non-admin users as they use the employee dashboard
         }
         table.setItems(employees);  // Admin sees all employees
@@ -2681,17 +2668,43 @@ private UserAccount authenticate(String rawUser, String rawPass) throws IOExcept
         return indexes;
     }
 
-    private static double readOptionalAmount(String[] row, Map<String, Integer> headerIndexes, String columnName, double fallbackValue) {
-        Integer index = headerIndexes.get(columnName.toLowerCase());
-        if (index == null || index < 0 || index >= row.length) {
-            return fallbackValue;
+    private static String readText(String[] row, Map<String, Integer> headerIndexes, int legacyIndex, String... columnNames) {
+        for (String columnName : columnNames) {
+            Integer index = headerIndexes.get(columnName.toLowerCase());
+            if (index != null && index >= 0 && index < row.length) {
+                return safeTrim(row[index]);
+            }
         }
+        if (legacyIndex >= 0 && legacyIndex < row.length) {
+            return safeTrim(row[legacyIndex]);
+        }
+        return "";
+    }
 
-        String value = safeTrim(row[index]);
+    private static double readAmount(String[] row, Map<String, Integer> headerIndexes, int legacyIndex, String columnName, double fallbackValue) {
+        String value = readText(row, headerIndexes, legacyIndex, columnName);
         return value.isEmpty() ? fallbackValue : parseDouble(value);
     }
 
-    private static double deriveHourlyRate(double basicSalary) {
+    private static String resolveEmploymentType(String[] row, Map<String, Integer> headerIndexes) {
+        String explicitEmploymentType = readText(row, headerIndexes, -1, "Employment Type");
+        if (!explicitEmploymentType.isEmpty()) {
+            return EmployeeFormData.normalizeEmploymentType(explicitEmploymentType);
+        }
+
+        String status = readText(row, headerIndexes, -1, "Status");
+        if (!status.isEmpty()) {
+            return EmployeeFormData.normalizeEmploymentType(status);
+        }
+
+        String position = readText(row, headerIndexes, 9, "Position");
+        return position.toLowerCase().contains("contract") ? "contract" : "fulltime";
+    }
+
+    private static double deriveHourlyRate(double basicSalary, String employmentType) {
+        if ("contract".equals(employmentType)) {
+            return 0.0;
+        }
         return basicSalary <= 0 ? 0.0 : basicSalary / 168.0;
     }
 
@@ -2726,9 +2739,25 @@ private static void styleDangerButton(Button b) {
     b.setOnMouseExited(e -> b.setStyle("-fx-background-color: #dc2626; -fx-text-fill: white; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 12px 14px; -fx-cursor: pointer;"));
 }
 
-private static void styleGhostButton(Button b) {
-    b.setStyle("-fx-background-color: rgba(148,163,184,0.12); -fx-text-fill: #e2e8f0; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 8px 12px; -fx-cursor: pointer;");
-    b.setOnMouseEntered(e -> b.setStyle("-fx-background-color: rgba(148,163,184,0.24); -fx-text-fill: #e2e8f0; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 8px 12px; -fx-cursor: pointer;"));
-    b.setOnMouseExited(e -> b.setStyle("-fx-background-color: rgba(148,163,184,0.12); -fx-text-fill: #e2e8f0; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 8px 12px; -fx-cursor: pointer;"));
+private void styleGhostButton(Button b) {
+    String baseTextColor = darkModeEnabled ? "#e2e8f0" : "#1e293b";
+    String baseBackground = darkModeEnabled ? "rgba(148,163,184,0.12)" : "rgba(15,23,42,0.06)";
+    String hoverBackground = darkModeEnabled ? "rgba(148,163,184,0.24)" : "rgba(15,23,42,0.12)";
+    b.setStyle("-fx-background-color: " + baseBackground + "; -fx-text-fill: " + baseTextColor + "; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 8px 12px; -fx-cursor: pointer;");
+    b.setOnMouseEntered(e -> b.setStyle("-fx-background-color: " + hoverBackground + "; -fx-text-fill: " + baseTextColor + "; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 8px 12px; -fx-cursor: pointer;"));
+    b.setOnMouseExited(e -> b.setStyle("-fx-background-color: " + baseBackground + "; -fx-text-fill: " + baseTextColor + "; -fx-font-weight: 700; -fx-border-radius: 10px; -fx-padding: 8px 12px; -fx-cursor: pointer;"));
+}
+
+private String adminCardStyle() {
+    if (darkModeEnabled) {
+        return "-fx-background-color: #0f172a; -fx-background-radius: 16; -fx-border-color: #1e293b; -fx-border-width: 1; -fx-border-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 24, 0.15, 0, 8);";
+    }
+    return "-fx-background-color: #ffffff; -fx-background-radius: 16; -fx-border-color: #dbe4ee; -fx-border-width: 1; -fx-border-radius: 16; -fx-effect: dropshadow(gaussian, rgba(15,23,42,0.08), 18, 0.12, 0, 6);";
+}
+
+private String adminHeadingStyle() {
+    return darkModeEnabled
+            ? "-fx-text-fill: #e2e8f0; -fx-font-size: 16; -fx-font-weight: 700;"
+            : "-fx-text-fill: #0f172a; -fx-font-size: 16; -fx-font-weight: 700;";
 }
 }

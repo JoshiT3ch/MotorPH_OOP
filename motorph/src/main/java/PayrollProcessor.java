@@ -41,38 +41,28 @@ public class PayrollProcessor {
         }
 
         double hourlyRate = employee.getHourlyRate();
-        double basePay = hourlyRate * hoursWorked;
+        double basePay = employee instanceof ContractEmployee
+                ? hourlyRate * hoursWorked
+                : employee.getBasicSalary();
+        double grossPay = employee.calculateGrossPay(hoursWorked);
+        double sssDeduction = employee.calculateSssDeduction(hoursWorked);
+        double philhealthDeduction = employee.calculatePhilhealthDeduction(hoursWorked);
+        double pagibigDeduction = employee.calculatePagibigDeduction(hoursWorked);
+        double taxDeduction = employee.calculateTaxDeduction(hoursWorked);
+        double totalDeductions = employee.calculateDeductions(hoursWorked);
+        double netPay = employee.calculateNetSalary(hoursWorked);
 
-        double originalBasicSalary = employee.getBasicSalary();
-        double originalHoursWorked = employee.getHoursWorked();
-        try {
-            // Reuse the existing deduction logic by evaluating it against the hourly-derived monthly pay.
-            employee.setBasicSalary(basePay);
-            employee.setHoursWorked(hoursWorked);
-
-            double grossPay = employee.grossSalary();
-            double sssDeduction = employee.getSssDeduction();
-            double philhealthDeduction = employee.getPhilhealthDeduction();
-            double pagibigDeduction = employee.getPagibigDeduction();
-            double taxDeduction = employee.getTaxDeduction();
-            double totalDeductions = employee.calculateDeductions();
-            double netPay = grossPay - totalDeductions;
-
-            return new PayrollComputation(
-                    employee,
-                    hoursWorked,
-                    hourlyRate,
-                    basePay,
-                    grossPay,
-                    sssDeduction,
-                    philhealthDeduction,
-                    pagibigDeduction,
-                    taxDeduction,
-                    totalDeductions,
-                    netPay);
-        } finally {
-            employee.setBasicSalary(originalBasicSalary);
-            employee.setHoursWorked(originalHoursWorked);
-        }
+        return new PayrollComputation(
+                employee,
+                hoursWorked,
+                hourlyRate,
+                basePay,
+                grossPay,
+                sssDeduction,
+                philhealthDeduction,
+                pagibigDeduction,
+                taxDeduction,
+                totalDeductions,
+                netPay);
     }
 }

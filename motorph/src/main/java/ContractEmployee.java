@@ -29,15 +29,22 @@ public class ContractEmployee extends Employee {
     }
 
     @Override
-    public double calculateDeductions() {
-        // contract employees may only pay tax, for example
-        return taxDeduction();
+    protected double calculateBasePay(double hoursWorked) {
+        return getHourlyRate() * hoursWorked;
     }
 
     @Override
-    public double calculateNetSalary() {
-        // calculate based on hours worked and hourly rate instead of basic salary
-        double gross = getHourlyRate() * getHoursWorked();
-        return gross - calculateDeductions();
+    protected double calculateAllowancePay(double hoursWorked) {
+        return 0.0;
+    }
+
+    @Override
+    public double calculateDeductions(double hoursWorked) {
+        return calculateMandatoryDeductionsBeforeTax(hoursWorked) + calculateTaxDeduction(hoursWorked);
+    }
+
+    @Override
+    public double calculateNetSalary(double hoursWorked) {
+        return calculateGrossPay(hoursWorked) - calculateDeductions(hoursWorked);
     }
 }

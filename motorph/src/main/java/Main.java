@@ -67,63 +67,33 @@ public class Main {
             Map<String, Integer> headerIndexes = buildHeaderIndexMap(header);
             String[] nextLine;
             while ((nextLine = reader.readNext()) != null) {
-                if (nextLine.length < 15) continue; // ensure core columns exist
+                if (nextLine.length < 9) continue;
 
-                // choose subclass based on the position string; this makes it easy to
-                // switch to contract employees without changing the CSV format.
-                String position = safeTrim(nextLine[9]);
-                boolean isContract = position.toLowerCase().contains("contract");
-                double basicSalary = parseDouble(nextLine[11]);
-                double grossSemiMonthlyRate = readOptionalAmount(nextLine, headerIndexes, "Gross Semi-Monthly Rate", basicSalary / 2.0);
-                double hourlyRate = readOptionalAmount(nextLine, headerIndexes, "Hourly Rate", deriveHourlyRate(basicSalary));
-                Employee emp;
-                if (isContract) {
-                    emp = new ContractEmployee(
-                            safeTrim(nextLine[0]), // ID
-                            safeTrim(nextLine[1]), // Last Name
-                            safeTrim(nextLine[2]), // First Name
-                            safeTrim(nextLine[3]), // Birthday
-                            safeTrim(nextLine[4]), // Address
-                            safeTrim(nextLine[5]), // Phone Number
-                            safeTrim(nextLine[6]), // SSS #
-                            safeTrim(nextLine[7]), // Philhealth #
-                            "",               // TIN #
-                            safeTrim(nextLine[8]), // Pag-ibig #
-                            "contract",        // Status
-                            position,
-                            "",               // Supervisor
-                            safeTrim(nextLine[10]), // Department
-                            basicSalary,
-                            parseDouble(nextLine[12]),
-                            parseDouble(nextLine[13]),
-                            parseDouble(nextLine[14]),
-                            grossSemiMonthlyRate,
-                            hourlyRate
-                    );
-                } else {
-                    emp = new FullTimeEmployee(
-                            safeTrim(nextLine[0]), // ID
-                            safeTrim(nextLine[1]), // Last Name
-                            safeTrim(nextLine[2]), // First Name
-                            safeTrim(nextLine[3]), // Birthday
-                            safeTrim(nextLine[4]), // Address
-                            safeTrim(nextLine[5]), // Phone Number
-                            safeTrim(nextLine[6]), // SSS #
-                            safeTrim(nextLine[7]), // Philhealth #
-                            "",               // TIN #
-                            safeTrim(nextLine[8]), // Pag-ibig #
-                            "fulltime",        // Status
-                            position,
-                            "",               // Supervisor
-                            safeTrim(nextLine[10]), // Department
-                            basicSalary,
-                            parseDouble(nextLine[12]),
-                            parseDouble(nextLine[13]),
-                            parseDouble(nextLine[14]),
-                            grossSemiMonthlyRate,
-                            hourlyRate
-                    );
-                }
+                String employmentType = resolveEmploymentType(nextLine, headerIndexes);
+                double basicSalary = readAmount(nextLine, headerIndexes, 11, "Basic Salary", 0.0);
+                double hourlyRate = readAmount(nextLine, headerIndexes, -1, "Hourly Rate", deriveHourlyRate(basicSalary, employmentType));
+                EmployeeFormData formData = new EmployeeFormData(
+                        readText(nextLine, headerIndexes, 0, "Employee #"),
+                        readText(nextLine, headerIndexes, 1, "Last Name"),
+                        readText(nextLine, headerIndexes, 2, "First Name"),
+                        readText(nextLine, headerIndexes, 3, "Birthday"),
+                        readText(nextLine, headerIndexes, 4, "Address"),
+                        readText(nextLine, headerIndexes, 5, "Phone Number"),
+                        readText(nextLine, headerIndexes, 6, "SSS Number"),
+                        readText(nextLine, headerIndexes, 7, "PhilHealth Number"),
+                        readText(nextLine, headerIndexes, -1, "TIN Number"),
+                        readText(nextLine, headerIndexes, 8, "PAG-IBIG Number"),
+                        "contract".equals(employmentType) ? EmployeeFormData.CONTRACT : EmployeeFormData.FULL_TIME,
+                        readText(nextLine, headerIndexes, 9, "Position"),
+                        readText(nextLine, headerIndexes, 10, "Department"),
+                        basicSalary,
+                        readAmount(nextLine, headerIndexes, 12, "Rice Subsidy", 0.0),
+                        readAmount(nextLine, headerIndexes, 13, "Phone Allowance", 0.0),
+                        readAmount(nextLine, headerIndexes, 14, "Clothing Allowance", 0.0),
+                        hourlyRate
+                );
+                Employee emp = formData.toEmployee();
+                emp.setGrossSemiMonthlyRate(readAmount(nextLine, headerIndexes, -1, "Gross Semi-Monthly Rate", basicSalary / 2.0));
                 list.add(emp);
             }
         } catch (IOException | CsvValidationException e) {
@@ -140,17 +110,43 @@ public class Main {
         return indexes;
     }
 
-    private static double readOptionalAmount(String[] row, Map<String, Integer> headerIndexes, String columnName, double fallbackValue) {
-        Integer index = headerIndexes.get(columnName.toLowerCase());
-        if (index == null || index < 0 || index >= row.length) {
-            return fallbackValue;
+    private static String readText(String[] row, Map<String, Integer> headerIndexes, int legacyIndex, String... columnNames) {
+        for (String columnName : columnNames) {
+            Integer index = headerIndexes.get(columnName.toLowerCase());
+            if (index != null && index >= 0 && index < row.length) {
+                return safeTrim(row[index]);
+            }
         }
+        if (legacyIndex >= 0 && legacyIndex < row.length) {
+            return safeTrim(row[legacyIndex]);
+        }
+        return "";
+    }
 
-        String value = safeTrim(row[index]);
+    private static double readAmount(String[] row, Map<String, Integer> headerIndexes, int legacyIndex, String columnName, double fallbackValue) {
+        String value = readText(row, headerIndexes, legacyIndex, columnName);
         return value.isEmpty() ? fallbackValue : parseDouble(value);
     }
 
-    private static double deriveHourlyRate(double basicSalary) {
+    private static String resolveEmploymentType(String[] row, Map<String, Integer> headerIndexes) {
+        String explicitEmploymentType = readText(row, headerIndexes, -1, "Employment Type");
+        if (!explicitEmploymentType.isEmpty()) {
+            return EmployeeFormData.normalizeEmploymentType(explicitEmploymentType);
+        }
+
+        String status = readText(row, headerIndexes, -1, "Status");
+        if (!status.isEmpty()) {
+            return EmployeeFormData.normalizeEmploymentType(status);
+        }
+
+        String position = readText(row, headerIndexes, 9, "Position");
+        return position.toLowerCase().contains("contract") ? "contract" : "fulltime";
+    }
+
+    private static double deriveHourlyRate(double basicSalary, String employmentType) {
+        if ("contract".equals(employmentType)) {
+            return 0.0;
+        }
         return basicSalary <= 0 ? 0.0 : basicSalary / 168.0;
     }
 
