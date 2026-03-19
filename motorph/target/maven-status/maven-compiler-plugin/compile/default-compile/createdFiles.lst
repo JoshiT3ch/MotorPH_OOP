@@ -10,8 +10,9 @@ UserAccount.class
 Main.class
 PayrollSystemGUI$PayrollComputationRequest.class
 PayrollSystemGUI$AttendanceStatusRow.class
-Employee$SssContributionBracket.class
 ContractEmployee.class
+Contribution$TaxBracket.class
+Contribution$SssContributionBracket.class
 PayrollProcessor.class
 PayrollSystemGUI.class
 PayrollSystemGUI$3.class
