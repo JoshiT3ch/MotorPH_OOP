@@ -1,0 +1,23 @@
+.root {
+    -app-bg: #f3f7fc;
+    -app-bg-alt: #e9eff8;
+    -nav-bg: rgba(255, 255, 255, 0.88);
+    -surface-color: #ffffff;
+    -panel-soft-bg: #f7faff;
+    -border-color: #d7e1ee;
+    -subtle-border-color: #e6edf7;
+    -accent-border: #a4c0ff;
+    -text-color: #162033;
+    -muted-text-color: #627089;
+    -accent-color: #2f6df6;
+    -accent-soft: #edf3ff;
+    -accent-soft-hover: #e4edff;
+    -accent-contrast: #ffffff;
+    -scroll-thumb: rgba(98, 112, 137, 0.35);
+    -shadow-color: rgba(18, 30, 60, 0.10);
+    -hero-start: #183d7f;
+    -hero-end: #2f6df6;
+    -hero-border: rgba(255, 255, 255, 0.24);
+    -hero-title-text: #ffffff;
+    -hero-muted-text: rgba(255, 255, 255, 0.84);
+}

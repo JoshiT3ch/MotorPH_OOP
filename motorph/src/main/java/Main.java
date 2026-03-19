@@ -7,6 +7,9 @@ import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvValidationException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +22,7 @@ public class Main {
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 
-        List<Employee> employees = loadEmployees("data/EmployeeData.csv");
+        List<Employee> employees = loadEmployees(resolveDataPath("EmployeeData.csv").toString());
         System.out.println("Employee data loaded successfully!");
 
         // polymorphism demo: create a contract employee and process payroll via processor
@@ -100,6 +103,35 @@ public class Main {
             System.out.println("Error reading CSV: " + e.getMessage());
         }
         return list;
+    }
+
+    public static Path resolveDataPath(String fileName) {
+        Path normalizedFile = Paths.get(fileName).normalize();
+        if (normalizedFile.isAbsolute()) {
+            return normalizedFile;
+        }
+
+        Path[] candidates = new Path[] {
+                Paths.get("data").resolve(normalizedFile),
+                Paths.get(normalizedFile.toString()),
+                Paths.get("motorph").resolve("data").resolve(normalizedFile),
+                Paths.get("motorph").resolve(normalizedFile)
+        };
+
+        for (Path candidate : candidates) {
+            Path normalizedCandidate = candidate.normalize();
+            if (normalizedCandidate.toFile().exists()) {
+                return normalizedCandidate;
+            }
+        }
+
+        return candidates[0].normalize();
+    }
+
+    public static String resolveStylesheet(String resourcePath) {
+        String normalizedPath = resourcePath.startsWith("/") ? resourcePath : "/" + resourcePath;
+        URL resource = Main.class.getResource(normalizedPath);
+        return resource == null ? null : resource.toExternalForm();
     }
 
     private static Map<String, Integer> buildHeaderIndexMap(String[] header) {

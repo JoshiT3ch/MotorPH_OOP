@@ -14,12 +14,16 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -117,7 +121,8 @@ public class PayrollSystemGUI extends Application {
         username.setOnAction(e -> doLogin.run());
         password.setOnAction(e -> doLogin.run());
 
-        card.getChildren().addAll(title, subtitle, spacer(6), username, password, loginBtn, msg);
+        var brand = buildLoginBrand();
+        card.getChildren().addAll(brand, subtitle, spacer(6), username, password, loginBtn, msg);
         root.getChildren().add(card);
         return new Scene(root, 900, 600);
     }
@@ -287,7 +292,7 @@ public class PayrollSystemGUI extends Application {
         styleGhostButton(logout);
         logout.setOnAction(e -> handleLogout());
 
-        var left = new HBox(12, title, badge);
+        var left = new HBox(12, buildTopBarBrandLogo(), title, badge);
         left.setAlignment(Pos.CENTER_LEFT);
 
         var right = new HBox(12, themeToggle, who, logout);
@@ -299,6 +304,55 @@ public class PayrollSystemGUI extends Application {
         HBox.setHgrow(left, Priority.ALWAYS);
         bar.getChildren().addAll(left, right);
         return bar;
+    }
+
+    private VBox buildLoginBrand() {
+        var title = new Label("MotorPH Payroll");
+        title.setFont(javafx.scene.text.Font.font(22));
+        title.setStyle("-fx-text-fill: #0f172a; -fx-font-weight: 700;");
+
+        var brand = new VBox(10, buildLogoBadge(110), title);
+        brand.setAlignment(Pos.CENTER);
+        return brand;
+    }
+
+    private Region buildTopBarBrandLogo() {
+        return buildLogoBadge(38);
+    }
+
+    private Region buildLogoBadge(double fitWidth) {
+        ImageView logoView = loadLogoImageView(fitWidth);
+        if (logoView != null) {
+            StackPane container = new StackPane(logoView);
+            container.getStyleClass().add("brand-logo");
+            return container;
+        }
+
+        var fallback = new Label("M");
+        fallback.getStyleClass().addAll("brand-logo", "brand-logo-text");
+        fallback.setMinSize(46, 46);
+        fallback.setPrefSize(46, 46);
+        fallback.setAlignment(Pos.CENTER);
+        return fallback;
+    }
+
+    private ImageView loadLogoImageView(double fitWidth) {
+        try {
+            Path logoPath = Main.resolveDataPath("motorPH_logo.png");
+            if (Files.exists(logoPath)) {
+                Image image = new Image(logoPath.toUri().toString());
+                if (!image.isError()) {
+                    ImageView imageView = new ImageView(image);
+                    imageView.setFitWidth(fitWidth);
+                    imageView.setPreserveRatio(true);
+                    imageView.setSmooth(true);
+                    return imageView;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return null;
     }
 
     private void handleLogout() {
