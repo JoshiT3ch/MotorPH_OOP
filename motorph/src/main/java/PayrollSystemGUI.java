@@ -14,12 +14,17 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -32,6 +37,7 @@ public class PayrollSystemGUI extends Application {
     private static final String EMPLOYEE_CSV = "data/EmployeeData.csv";
     private static final String USERS_CSV = "data/Users.csv";
     private static final String ATTENDANCE_CSV = "data/employee_attendance.csv"; // Attendance data
+    private static final String LOGO_PNG = "data/motorPH_logo.png";
 
     private static final Charset EMPLOYEE_CSV_CHARSET = Charset.forName("cp1252");
 
@@ -70,6 +76,8 @@ public class PayrollSystemGUI extends Application {
 
         var subtitle = new Label("Sign in to continue");
         subtitle.setStyle("-fx-text-fill: #475569;");
+
+        var logoView = buildLogoView();
 
         var username = new TextField();
         username.setPromptText("Username (admin or Employee # e.g. 10001)");
@@ -117,9 +125,46 @@ public class PayrollSystemGUI extends Application {
         username.setOnAction(e -> doLogin.run());
         password.setOnAction(e -> doLogin.run());
 
+        if (logoView != null) {
+            card.getChildren().add(logoView);
+        }
         card.getChildren().addAll(title, subtitle, spacer(6), username, password, loginBtn, msg);
         root.getChildren().add(card);
         return new Scene(root, 900, 600);
+    }
+
+    private ImageView buildLogoView() {
+        Path logoPath = resolveDataPath(LOGO_PNG);
+        if (logoPath == null) {
+            return null;
+        }
+
+        Image logo = new Image(logoPath.toUri().toString());
+        if (logo.isError()) {
+            return null;
+        }
+
+        ImageView logoView = new ImageView(logo);
+        logoView.setPreserveRatio(true);
+        logoView.setFitWidth(140);
+        logoView.setSmooth(true);
+        logoView.setCache(true);
+        return logoView;
+    }
+
+    private Path resolveDataPath(String relativePath) {
+        Path[] candidates = new Path[]{
+                Paths.get(relativePath),
+                Paths.get("motorph").resolve(relativePath)
+        };
+
+        for (Path candidate : candidates) {
+            Path normalized = candidate.toAbsolutePath().normalize();
+            if (Files.exists(normalized)) {
+                return normalized;
+            }
+        }
+        return null;
     }
 
     private void loadEmployeesFromCsv() throws IOException, CsvValidationException {
