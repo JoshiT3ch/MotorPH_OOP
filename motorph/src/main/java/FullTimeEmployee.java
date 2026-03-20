@@ -30,7 +30,9 @@ public class FullTimeEmployee extends Employee {
 
     @Override
     protected double calculateBasePay(double hoursWorked) {
-        return getBasicSalary();
+        double computedHoursPay = getHourlyRate() * hoursWorked;
+        double fallbackBase = getBasicSalary() / 2.0;
+        return computedHoursPay > 0 ? computedHoursPay : fallbackBase;
     }
 
     @Override

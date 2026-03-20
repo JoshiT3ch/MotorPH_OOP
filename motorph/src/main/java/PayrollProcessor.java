@@ -9,6 +9,9 @@ public class PayrollProcessor {
             Employee employee,
             double hoursWorked,
             double hourlyRate,
+            double basicSalary,
+            double computedHoursPay,
+            double basePayUsed,
             double basePay,
             double grossPay,
             double sssDeduction,
@@ -33,7 +36,10 @@ public class PayrollProcessor {
             System.out.println("Hourly rate: PHP " + String.format("%.2f", payroll.hourlyRate()));
             System.out.println("Hourly pay: PHP " + String.format("%.2f", payroll.basePay()));
         } else {
-            System.out.println("Basic salary: PHP " + String.format("%.2f", payroll.basePay()));
+            System.out.println("Basic salary: PHP " + String.format("%.2f", payroll.basicSalary()));
+            System.out.println("Hourly rate: PHP " + String.format("%.2f", payroll.hourlyRate()));
+            System.out.println("Computed hours pay: PHP " + String.format("%.2f", payroll.computedHoursPay()));
+            System.out.println("Base pay used: PHP " + String.format("%.2f", payroll.basePayUsed()));
         }
         System.out.println("Gross salary: PHP " + String.format("%.2f", payroll.grossPay()));
         System.out.println("SSS deduction: PHP " + String.format("%.2f", payroll.sssDeduction()));
@@ -50,10 +56,11 @@ public class PayrollProcessor {
         }
 
         double hourlyRate = employee.getHourlyRate();
-        double basePay = isContractEmployee(employee)
-                ? hourlyRate * hoursWorked
-                : employee.getBasicSalary();
-        double grossPay = employee.calculateGrossPay(hoursWorked);
+        double basicSalary = employee.getBasicSalary();
+        double computedHoursPay = hourlyRate * hoursWorked;
+        double basePay = employee.calculateBasePay(hoursWorked);
+        double grossPay = basePay + (isContractEmployee(employee) ? 0.0
+                : employee.getRiceSubsidy() + employee.getPhoneAllowance() + employee.getClothingAllowance());
         double sssDeduction = employee.calculateSssDeduction(hoursWorked);
         double philhealthDeduction = employee.calculatePhilhealthDeduction(hoursWorked);
         double pagibigDeduction = employee.calculatePagibigDeduction(hoursWorked);
@@ -65,6 +72,9 @@ public class PayrollProcessor {
                 employee,
                 hoursWorked,
                 hourlyRate,
+                basicSalary,
+                computedHoursPay,
+                basePay,
                 basePay,
                 grossPay,
                 sssDeduction,

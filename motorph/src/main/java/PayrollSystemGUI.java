@@ -1649,7 +1649,10 @@ public class PayrollSystemGUI extends Application {
             content.append(String.format("Hours Worked:            %10.2f\n", payroll.hoursWorked()));
             content.append(String.format("Hourly Pay:          PHP %10.2f\n", payroll.basePay()));
         } else {
-            content.append(String.format("Basic Salary:        PHP %10.2f\n", payroll.basePay()));
+            content.append(String.format("Basic Salary:        PHP %10.2f\n", payroll.basicSalary()));
+            content.append(String.format("Hourly Rate:         PHP %10.2f\n", payroll.hourlyRate()));
+            content.append(String.format("Computed Hours Pay:  PHP %10.2f\n", payroll.computedHoursPay()));
+            content.append(String.format("Base Pay Used:       PHP %10.2f\n", payroll.basePayUsed()));
             content.append(String.format("Rice Subsidy:        PHP %10.2f\n", emp.getRiceSubsidy()));
             content.append(String.format("Phone Allowance:     PHP %10.2f\n", emp.getPhoneAllowance()));
             content.append(String.format("Clothing Allowance:  PHP %10.2f\n", emp.getClothingAllowance()));
@@ -2614,7 +2617,10 @@ public class PayrollSystemGUI extends Application {
             content.append("Hourly rate:").append(" ").append(String.format("%.2f", payroll.hourlyRate())).append("\n");
             content.append("Hourly pay:").append(" ").append(String.format("%.2f", payroll.basePay())).append("\n\n");
         } else {
-            content.append("Basic salary:").append(" ").append(String.format("%.2f", payroll.basePay())).append("\n");
+            content.append("Basic salary:").append(" ").append(String.format("%.2f", payroll.basicSalary())).append("\n");
+            content.append("Hourly rate:").append(" ").append(String.format("%.2f", payroll.hourlyRate())).append("\n");
+            content.append("Computed hours pay:").append(" ").append(String.format("%.2f", payroll.computedHoursPay())).append("\n");
+            content.append("Base pay used:").append(" ").append(String.format("%.2f", payroll.basePayUsed())).append("\n");
             content.append("Rice subsidy:").append(" ").append(String.format("%.2f", selected.getRiceSubsidy())).append("\n");
             content.append("Phone allowance:").append(" ").append(String.format("%.2f", selected.getPhoneAllowance())).append("\n");
             content.append("Clothing allowance:").append(" ").append(String.format("%.2f", selected.getClothingAllowance())).append("\n\n");
