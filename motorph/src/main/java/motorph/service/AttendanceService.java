@@ -102,9 +102,9 @@ public class AttendanceService {
     public List<String> clockIn(Employee employee, LocalDate date, LocalTime time) {
         List<AttendanceRecord> records = getAllRecords();
         boolean existingOpenRecord = records.stream().anyMatch(record ->
-                record.employeeId().equals(employee.getId())
+                record.belongsTo(employee.getId())
                         && date.equals(record.date())
-                        && record.logOut() == null);
+                        && record.hasOpenLog());
         if (existingOpenRecord) {
             return List.of("There is already an open clock in record for this employee and date.");
         }
@@ -130,21 +130,12 @@ public class AttendanceService {
     public List<String> clockOut(Employee employee, LocalDate date, LocalTime time) {
         List<AttendanceRecord> records = getAllRecords();
         Optional<AttendanceRecord> existingRecord = records.stream()
-                .filter(record -> record.employeeId().equals(employee.getId()) && date.equals(record.date()) && record.logOut() == null)
+                .filter(record -> record.belongsTo(employee.getId()) && date.equals(record.date()) && record.hasOpenLog())
                 .findFirst();
         if (existingRecord.isEmpty()) {
             return List.of("No open clock in record found for the selected date.");
         }
-        AttendanceRecord updatedRecord = new AttendanceRecord(
-                existingRecord.get().employeeId(),
-                existingRecord.get().lastName(),
-                existingRecord.get().firstName(),
-                existingRecord.get().dateText(),
-                existingRecord.get().logInText(),
-                TIME_FORMAT.format(time),
-                existingRecord.get().date(),
-                existingRecord.get().logIn(),
-                time);
+        AttendanceRecord updatedRecord = existingRecord.get().withLogOut(time, TIME_FORMAT.format(time));
         List<String> errors = validationService.validateAttendance(updatedRecord, employeeRepository.findAll());
         if (!errors.isEmpty()) {
             return errors;

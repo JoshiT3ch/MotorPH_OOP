@@ -32,7 +32,7 @@ public class LeaveService {
 
     public List<LeaveRequest> getRequestsForEmployee(String employeeId) {
         return getAllRequests().stream()
-                .filter(request -> request.employeeId().equals(employeeId))
+                .filter(request -> request.belongsTo(employeeId))
                 .sorted(Comparator.comparing(LeaveRequest::filedDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
                 .toList();
     }
@@ -74,18 +74,7 @@ public class LeaveService {
         if ("Rejected".equalsIgnoreCase(normalizedStatus) && normalizedRemarks.isBlank()) {
             return List.of("Please provide remarks when rejecting a leave request.");
         }
-        LeaveRequest updated = new LeaveRequest(
-                existing.get().requestId(),
-                existing.get().employeeId(),
-                existing.get().employeeName(),
-                existing.get().leaveType(),
-                existing.get().startDate(),
-                existing.get().endDate(),
-                existing.get().reason(),
-                normalizedStatus,
-                approver,
-                normalizedRemarks,
-                existing.get().filedDate());
+        LeaveRequest updated = existing.get().withDecision(normalizedStatus, approver, normalizedRemarks);
         List<String> errors = validationService.validateLeaveRequest(updated, employeeRepository.findAll());
         if (!errors.isEmpty()) {
             return errors;

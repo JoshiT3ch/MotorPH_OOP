@@ -49,4 +49,14 @@ public class ContractEmployee extends Employee {
     public double calculateNetSalary(double hoursWorked) {
         return calculateGrossPay(hoursWorked) - calculateDeductions(hoursWorked);
     }
+
+    @Override
+    public boolean isContractEmployee() {
+        return true;
+    }
+
+    @Override
+    public String getEmploymentCategoryLabel() {
+        return "Contract Employee";
+    }
 }

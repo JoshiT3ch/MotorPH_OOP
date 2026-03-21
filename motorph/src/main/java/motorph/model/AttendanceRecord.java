@@ -15,6 +15,15 @@ public record AttendanceRecord(
         LocalTime logIn,
         LocalTime logOut) {
 
+    public AttendanceRecord {
+        employeeId = normalizeText(employeeId);
+        lastName = normalizeText(lastName);
+        firstName = normalizeText(firstName);
+        dateText = normalizeText(dateText);
+        logInText = normalizeText(logInText);
+        logOutText = normalizeText(logOutText);
+    }
+
     public int monthValue() {
         return date == null ? -1 : date.getMonthValue();
     }
@@ -33,5 +42,30 @@ public record AttendanceRecord(
 
     public boolean isComplete() {
         return logIn != null && logOut != null && hoursWorked() > 0;
+    }
+
+    public boolean hasOpenLog() {
+        return logIn != null && logOut == null;
+    }
+
+    public boolean belongsTo(String candidateEmployeeId) {
+        return employeeId.equals(normalizeText(candidateEmployeeId));
+    }
+
+    public AttendanceRecord withLogOut(LocalTime time, String logOutTextValue) {
+        return new AttendanceRecord(
+                employeeId,
+                lastName,
+                firstName,
+                dateText,
+                logInText,
+                logOutTextValue,
+                date,
+                logIn,
+                time);
+    }
+
+    private static String normalizeText(String value) {
+        return value == null ? "" : value.trim();
     }
 }

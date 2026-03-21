@@ -46,4 +46,9 @@ public class FullTimeEmployee extends Employee {
     public double calculateNetSalary(double hoursWorked) {
         return calculateGrossPay(hoursWorked) - calculateDeductions(hoursWorked);
     }
+
+    @Override
+    public String getEmploymentCategoryLabel() {
+        return "Full-Time Employee";
+    }
 }

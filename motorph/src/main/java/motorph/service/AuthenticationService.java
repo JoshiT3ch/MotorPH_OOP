@@ -32,7 +32,7 @@ public class AuthenticationService {
         List<Employee> employees = employeeRepository.findAll();
         List<UserAccount> accounts = userRepository.findAll();
         return employees.stream()
-                .filter(employee -> accounts.stream().noneMatch(account -> employee.getId().equals(account.employeeId())))
+                .filter(employee -> accounts.stream().noneMatch(account -> account.isLinkedTo(employee.getId())))
                 .sorted(Comparator.comparing(Employee::getId))
                 .toList();
     }

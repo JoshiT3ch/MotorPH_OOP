@@ -525,16 +525,15 @@ public class PayrollSystemGUI extends Application {
             List<AttendanceRecord> payrollRecords = attendanceService.getAttendanceByEmployeeMonthYear(employee.getId(), monthBox.getValue(), yearBox.getValue());
             double hours = payrollRecords.stream().mapToDouble(AttendanceRecord::hoursWorked).sum();
             PayrollService.PayrollComputation payroll = payrollService.computePayroll(employee, hours);
-            double allowances = payroll.grossPay() - payroll.basePay();
 
             infoValue.setText(employee.getId() + " | " + employee.getFullName());
             periodValue.setText(monthName(monthBox.getValue()) + " " + yearBox.getValue());
             hoursValue.setText(String.format("%.2f hrs", hours));
-            employmentValue.setText(payrollService.isContractEmployee(employee) ? "Contract Employee" : "Full-Time Employee");
+            employmentValue.setText(employee.getEmploymentCategoryLabel());
             basicSalaryValue.setText(formatCurrency(payroll.basicSalary()));
             rateValue.setText(formatCurrency(payroll.hourlyRate()) + " / hr");
             basePayValue.setText(formatCurrency(payroll.basePay()));
-            allowanceValue.setText(formatCurrency(allowances));
+            allowanceValue.setText(formatCurrency(payroll.allowancePay()));
             grossPayValue.setText(formatCurrency(payroll.grossPay()));
             sssValue.setText(formatCurrency(payroll.sssDeduction()));
             philhealthValue.setText(formatCurrency(payroll.philhealthDeduction()));

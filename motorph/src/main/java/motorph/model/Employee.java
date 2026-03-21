@@ -47,26 +47,26 @@ public abstract class Employee {
             double grossSemiMonthlyRate,
             double hourlyRate
     ) {
-        this.id = id;
-        this.lastName = lastName;
-        this.firstName = firstName;
-        this.birthdate = birthdate;
-        this.address = address;
-        this.phoneNumber = phoneNumber;
-        this.sssNo = sssNo;
-        this.philhealthNo = philhealthNo;
-        this.tinNo = tinNo;
-        this.pagibigNo = pagibigNo;
-        this.status = status;
-        this.position = position;
-        this.supervisor = supervisor;
-        this.department = department;
-        this.basicSalary = basicSalary;
-        this.riceSubsidy = riceSubsidy;
-        this.phoneAllowance = phoneAllowance;
-        this.clothingAllowance = clothingAllowance;
-        this.grossSemiMonthlyRate = grossSemiMonthlyRate;
-        this.hourlyRate = hourlyRate;
+        setId(id);
+        setLastName(lastName);
+        setFirstName(firstName);
+        setBirthdate(birthdate);
+        setAddress(address);
+        setPhoneNumber(phoneNumber);
+        setSssNo(sssNo);
+        setPhilhealthNo(philhealthNo);
+        setTinNo(tinNo);
+        setPagibigNo(pagibigNo);
+        setStatus(status);
+        setPosition(position);
+        setSupervisor(supervisor);
+        setDepartment(department);
+        setBasicSalary(basicSalary);
+        setRiceSubsidy(riceSubsidy);
+        setPhoneAllowance(phoneAllowance);
+        setClothingAllowance(clothingAllowance);
+        setGrossSemiMonthlyRate(grossSemiMonthlyRate);
+        setHourlyRate(hourlyRate);
     }
 
     public static void loadContributionRates() throws Exception {
@@ -95,6 +95,14 @@ public abstract class Employee {
 
     public double calculateGrossPay(double hoursWorked) {
         return calculateBasePay(hoursWorked) + calculateAllowancePay(hoursWorked);
+    }
+
+    public double calculateBasePayAmount(double hoursWorked) {
+        return calculateBasePay(hoursWorked);
+    }
+
+    public double calculateAllowancePayAmount(double hoursWorked) {
+        return calculateAllowancePay(hoursWorked);
     }
 
     public double calculateSssDeduction(double hoursWorked) {
@@ -129,12 +137,20 @@ public abstract class Employee {
 
     public abstract double calculateNetSalary(double hoursWorked);
 
+    public boolean isContractEmployee() {
+        return false;
+    }
+
+    public String getEmploymentCategoryLabel() {
+        return isContractEmployee() ? "Contract Employee" : "Full-Time Employee";
+    }
+
     public String getId() {
         return id;
     }
 
     public void setId(String id) {
-        this.id = id;
+        this.id = normalizeText(id);
     }
 
     public String getLastName() {
@@ -142,7 +158,7 @@ public abstract class Employee {
     }
 
     public void setLastName(String lastName) {
-        this.lastName = lastName;
+        this.lastName = normalizeText(lastName);
     }
 
     public String getFirstName() {
@@ -150,7 +166,7 @@ public abstract class Employee {
     }
 
     public void setFirstName(String firstName) {
-        this.firstName = firstName;
+        this.firstName = normalizeText(firstName);
     }
 
     public double getBasicSalary() {
@@ -158,7 +174,7 @@ public abstract class Employee {
     }
 
     public void setBasicSalary(double basicSalary) {
-        this.basicSalary = basicSalary;
+        this.basicSalary = sanitizeNonNegativeAmount(basicSalary);
     }
 
     public double getRiceSubsidy() {
@@ -166,7 +182,7 @@ public abstract class Employee {
     }
 
     public void setRiceSubsidy(double riceSubsidy) {
-        this.riceSubsidy = riceSubsidy;
+        this.riceSubsidy = sanitizeNonNegativeAmount(riceSubsidy);
     }
 
     public double getPhoneAllowance() {
@@ -174,7 +190,7 @@ public abstract class Employee {
     }
 
     public void setPhoneAllowance(double phoneAllowance) {
-        this.phoneAllowance = phoneAllowance;
+        this.phoneAllowance = sanitizeNonNegativeAmount(phoneAllowance);
     }
 
     public double getClothingAllowance() {
@@ -182,7 +198,7 @@ public abstract class Employee {
     }
 
     public void setClothingAllowance(double clothingAllowance) {
-        this.clothingAllowance = clothingAllowance;
+        this.clothingAllowance = sanitizeNonNegativeAmount(clothingAllowance);
     }
 
     public double getHoursWorked() {
@@ -190,7 +206,7 @@ public abstract class Employee {
     }
 
     public void setHoursWorked(double hoursWorked) {
-        this.hoursWorked = hoursWorked;
+        this.hoursWorked = sanitizeNonNegativeAmount(hoursWorked);
     }
 
     public String getBirthdate() {
@@ -198,7 +214,7 @@ public abstract class Employee {
     }
 
     public void setBirthdate(String birthdate) {
-        this.birthdate = birthdate;
+        this.birthdate = normalizeText(birthdate);
     }
 
     public String getAddress() {
@@ -206,7 +222,7 @@ public abstract class Employee {
     }
 
     public void setAddress(String address) {
-        this.address = address;
+        this.address = normalizeText(address);
     }
 
     public String getPhoneNumber() {
@@ -214,7 +230,7 @@ public abstract class Employee {
     }
 
     public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
+        this.phoneNumber = normalizeText(phoneNumber);
     }
 
     public String getSssNo() {
@@ -222,7 +238,7 @@ public abstract class Employee {
     }
 
     public void setSssNo(String sssNo) {
-        this.sssNo = sssNo;
+        this.sssNo = normalizeText(sssNo);
     }
 
     public String getPhilhealthNo() {
@@ -230,7 +246,7 @@ public abstract class Employee {
     }
 
     public void setPhilhealthNo(String philhealthNo) {
-        this.philhealthNo = philhealthNo;
+        this.philhealthNo = normalizeText(philhealthNo);
     }
 
     public String getTinNo() {
@@ -238,7 +254,7 @@ public abstract class Employee {
     }
 
     public void setTinNo(String tinNo) {
-        this.tinNo = tinNo;
+        this.tinNo = normalizeText(tinNo);
     }
 
     public String getPagibigNo() {
@@ -246,7 +262,7 @@ public abstract class Employee {
     }
 
     public void setPagibigNo(String pagibigNo) {
-        this.pagibigNo = pagibigNo;
+        this.pagibigNo = normalizeText(pagibigNo);
     }
 
     public String getStatus() {
@@ -254,7 +270,7 @@ public abstract class Employee {
     }
 
     public void setStatus(String status) {
-        this.status = status;
+        this.status = normalizeEmploymentType(status);
     }
 
     public String getEmploymentType() {
@@ -266,7 +282,7 @@ public abstract class Employee {
     }
 
     public void setPosition(String position) {
-        this.position = position;
+        this.position = normalizeText(position);
     }
 
     public String getDepartment() {
@@ -274,7 +290,7 @@ public abstract class Employee {
     }
 
     public void setDepartment(String department) {
-        this.department = department;
+        this.department = normalizeText(department);
     }
 
     public String getSupervisor() {
@@ -282,7 +298,7 @@ public abstract class Employee {
     }
 
     public void setSupervisor(String supervisor) {
-        this.supervisor = supervisor;
+        this.supervisor = normalizeText(supervisor);
     }
 
     public double getGrossSemiMonthlyRate() {
@@ -290,7 +306,7 @@ public abstract class Employee {
     }
 
     public void setGrossSemiMonthlyRate(double grossSemiMonthlyRate) {
-        this.grossSemiMonthlyRate = grossSemiMonthlyRate;
+        this.grossSemiMonthlyRate = sanitizeNonNegativeAmount(grossSemiMonthlyRate);
     }
 
     public double getHourlyRate() {
@@ -298,7 +314,7 @@ public abstract class Employee {
     }
 
     public void setHourlyRate(double hourlyRate) {
-        this.hourlyRate = hourlyRate;
+        this.hourlyRate = sanitizeNonNegativeAmount(hourlyRate);
     }
 
     public boolean isArchived() {
@@ -311,5 +327,18 @@ public abstract class Employee {
 
     private String safeText(String value) {
         return value == null ? "" : value;
+    }
+
+    private String normalizeText(String value) {
+        return safeText(value).trim();
+    }
+
+    private String normalizeEmploymentType(String value) {
+        String normalized = normalizeText(value);
+        return "contract".equalsIgnoreCase(normalized) ? "contract" : "fulltime";
+    }
+
+    private double sanitizeNonNegativeAmount(double value) {
+        return Double.isFinite(value) && value > 0.0 ? value : 0.0;
     }
 }

@@ -1,12 +1,11 @@
 package motorph.service;
 
-import motorph.model.ContractEmployee;
 import motorph.model.Employee;
 
 public class PayrollService {
 
     public boolean isContractEmployee(Employee employee) {
-        return employee instanceof ContractEmployee || "contract".equalsIgnoreCase(employee.getEmploymentType());
+        return employee != null && employee.isContractEmployee();
     }
 
     public PayrollComputation computePayroll(Employee employee, double hoursWorked) {
@@ -19,9 +18,9 @@ public class PayrollService {
         double hourlyRate = employee.getHourlyRate();
         double basicSalary = employee.getBasicSalary();
         double computedHoursPay = hourlyRate * hoursWorked;
-        double basePay = employee.calculateGrossPay(hoursWorked) - (isContractEmployee(employee) ? 0.0
-                : employee.getRiceSubsidy() + employee.getPhoneAllowance() + employee.getClothingAllowance());
+        double basePay = employee.calculateBasePayAmount(hoursWorked);
         double grossPay = employee.calculateGrossPay(hoursWorked);
+        double allowancePay = employee.calculateAllowancePayAmount(hoursWorked);
         double sssDeduction = employee.calculateSssDeduction(hoursWorked);
         double philhealthDeduction = employee.calculatePhilhealthDeduction(hoursWorked);
         double pagibigDeduction = employee.calculatePagibigDeduction(hoursWorked);
@@ -30,7 +29,7 @@ public class PayrollService {
         double netPay = employee.calculateNetSalary(hoursWorked);
 
         return new PayrollComputation(employee, hoursWorked, hourlyRate, basicSalary, computedHoursPay, basePay, grossPay,
-                sssDeduction, philhealthDeduction, pagibigDeduction, taxDeduction, totalDeductions, netPay);
+                allowancePay, sssDeduction, philhealthDeduction, pagibigDeduction, taxDeduction, totalDeductions, netPay);
     }
 
     public record PayrollComputation(
@@ -41,6 +40,7 @@ public class PayrollService {
             double computedHoursPay,
             double basePay,
             double grossPay,
+            double allowancePay,
             double sssDeduction,
             double philhealthDeduction,
             double pagibigDeduction,
